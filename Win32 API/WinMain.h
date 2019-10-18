@@ -1,6 +1,5 @@
 #pragma once
 #include <Windows.h>
-extern const int size_buffer;
 static RECT clientArea;
 static std::fstream file;
 static FILE* file_var;

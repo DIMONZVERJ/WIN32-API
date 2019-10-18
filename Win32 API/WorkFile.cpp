@@ -5,7 +5,7 @@
 #include <fstream>
 #include "WinMain.h"
 #include <tchar.h>
-extern const int size_buffer;
+size_t size_file;
 extern int sizeWindowX;
 extern int sizeWindowY;
 extern int wigth;
@@ -17,7 +17,7 @@ void ParseToInt(char buffer[], int temp[])
 {
 	char s[10]; int k = 0, m = 0;
 	memset(s, ' ', 10);
-	for (int i = 0; i < size_buffer; i++)
+	for (int i = 0; i < size_file; i++)
 	{
 		if ((buffer[i] >= '0' && buffer[i] <= '9') || buffer[i] == '-')
 		{
@@ -41,9 +41,10 @@ void ParseToInt(char buffer[], int temp[])
 }
 void funcWINAPI_in()
 {
-	buffer = new char[size_buffer];
 	handle = CreateFile(_T("Text.txt"), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	bool result = ReadFile(handle, buffer, size_buffer, &d, NULL);
+	size_file=GetFileSize(handle, NULL);
+	buffer = new char[size_file];
+	bool result = ReadFile(handle, buffer, size_file, &d, NULL);
 	CloseHandle(handle);
 	ParseToInt(buffer, temp);
 	sizeWindowX = temp[0]; sizeWindowY = temp[1]; wigth = temp[2]; height = temp[3]; R = temp[4]; G = temp[5]; B = temp[6];
@@ -81,4 +82,12 @@ void fstream_out()
 	file.open("Text.txt", std::ios_base::out | std::ios_base::trunc);
 	if (!file.fail())	file << sizeWindowX << " " << sizeWindowY << " " << wigth << " " << height << " " << R << " " << G << " " << B;
 	file.close(); //файловые потоки 
+}
+void MappingFile_in()
+{
+
+}
+void MappingFile_out()
+{
+
 }

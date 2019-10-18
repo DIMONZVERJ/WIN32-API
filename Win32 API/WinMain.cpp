@@ -8,7 +8,6 @@
 #include <Windows.h>
 #define KEY_SHIFTED     0x8000
 #define KEY_TOGGLED     0x0001
-const int size_buffer = 50;
 const TCHAR szWinClass[] = _T("Win32SampleApp");
 const TCHAR szWinName[] = _T("Win32SampleWindow");
 const int countLine = 2;
@@ -206,6 +205,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	//fstream_in(); //файловые потоки
 	//FILE_var_in(); //файловые переменные
 	funcWINAPI_in(); //через функции WINAPI
+	//MappinigFile_in();
 	wincl.style = CS_VREDRAW | CS_HREDRAW;
 	wincl.hInstance = hInstance;
 	wincl.lpszClassName = szWinClass;
@@ -268,5 +268,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	//fstream_out(); //файловые потоки
 	//FILE_var_out(); //файловые переменные
 	funcWINAPI_out(); //через функции WINAPI
+	//MappingFile_out();
 	return NULL;
 }
