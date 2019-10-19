@@ -1,4 +1,9 @@
 #pragma once
+#include <tchar.h>
+#include <windowsx.h>
+#include <cmath>
+#include <time.h>
+#include <fstream>
 #include <Windows.h>
 static RECT clientArea;
 static std::fstream file;

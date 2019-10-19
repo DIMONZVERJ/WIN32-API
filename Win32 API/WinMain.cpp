@@ -1,11 +1,5 @@
-#include <tchar.h>
-#include <windowsx.h>
-#include <cmath>
-#include <time.h>
-#include <fstream>
 #include "WinMain.h"
 #include "WorkFile.h"
-#include <Windows.h>
 #define KEY_SHIFTED     0x8000
 #define KEY_TOGGLED     0x0001
 const TCHAR szWinClass[] = _T("Win32SampleApp");
@@ -204,8 +198,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	wincl = { 0 };         /* Data structure for the windowclass */
 	//fstream_in(); //файловые потоки
 	//FILE_var_in(); //файловые переменные
-	funcWINAPI_in(); //через функции WINAPI
-	//MappinigFile_in();
+	//funcWINAPI_in(); //через функции WINAPI
+	MappingFile_in();
 	wincl.style = CS_VREDRAW | CS_HREDRAW;
 	wincl.hInstance = hInstance;
 	wincl.lpszClassName = szWinClass;
@@ -267,7 +261,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	UnregisterClass(szWinClass, hInstance);
 	//fstream_out(); //файловые потоки
 	//FILE_var_out(); //файловые переменные
-	funcWINAPI_out(); //через функции WINAPI
-	//MappingFile_out();
+	//funcWINAPI_out(); //через функции WINAPI
+	MappingFile_out();
 	return NULL;
 }
