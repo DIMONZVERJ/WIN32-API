@@ -79,7 +79,6 @@ void MappingFile_in()
 {
 	handle_file = CreateFile(_T("Text.txt"), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL); 
 	size_file = GetFileSize(handle_file, NULL);
-	buffer = new char[size_file];
 	handle_map = CreateFileMapping(handle_file, NULL, PAGE_READONLY, 0, 0, NULL);
 	buffer = (char*)MapViewOfFile(handle_map, FILE_MAP_READ, 0, 0, 0);
 	ParseToInt(buffer, temp);
