@@ -227,6 +227,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	);
 	/* Make the window visible on the screen */
 	GetClientRect(hwnd, &clientArea);
+	GetWindowRect(hwnd, &rect); sizeWindowX = rect.left; sizeWindowY = rect.top;
 	sizeX = clientArea.right / (countLine + 1); //size of a rectangle horizontally
 	sizeY = clientArea.bottom / (countLine + 1); //size of a rectangle vertically
 	/*array rectangle initialization*/
@@ -249,19 +250,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		/* Send message to WindowProcedure */
 		DispatchMessage(&message);
 	}
-
 	/* Cleanup stuff */
 	for (int i = 0; i < countLine + 1; i++)
 		delete[] sections[i];
 	delete[] sections;
+	//fstream_out(); //файловые потоки
+	//FILE_var_out(); //файловые переменные
+	//funcWINAPI_out(); //через функции WINAPI
+	MappingFile_out();
 	DeleteObject(hBrushSection);
 	DeleteObject(hPen);
 	DestroyWindow(hwnd);
 	DeleteObject(hBrush);
 	UnregisterClass(szWinClass, hInstance);
-	//fstream_out(); //файловые потоки
-	//FILE_var_out(); //файловые переменные
-	//funcWINAPI_out(); //через функции WINAPI
-	MappingFile_out();
 	return NULL;
 }

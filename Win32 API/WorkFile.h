@@ -4,11 +4,14 @@
 #include <fstream>
 #include <tchar.h>
 #include <string>
+static char* buffer;
+static int temp[7];
+static HANDLE handle;
 static HANDLE handle_file;
 static HANDLE handle_map;
 static size_t size_file;
 static PBYTE pbite_map;
-static INT MaxSizeText;
+int MaxSizeBuf();
 void funcWINAPI_in(void);
 void funcWINAPI_out(void);
 void FILE_var_in(void);

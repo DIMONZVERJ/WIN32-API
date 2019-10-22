@@ -6,6 +6,7 @@
 #include <fstream>
 #include <Windows.h>
 static RECT clientArea;
+static RECT rect;
 static std::fstream file;
 static FILE* file_var;
 static DWORD d;
@@ -18,9 +19,6 @@ static HPEN hPen;
 static PAINTSTRUCT paint;
 static HBRUSH hBrush;
 static HBRUSH hBrushSection;
-static HANDLE handle;
-static int temp[7];
-static char* buffer;
 bool operator ==(RECT, RECT);
 void FindSectAndDraw(RECT);
 void PaintLine(void);
