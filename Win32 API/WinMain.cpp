@@ -1,5 +1,7 @@
 #include "WinMain.h"
 #include "WorkFile.h"
+#pragma region  
+
 #define KEY_SHIFTED     0x8000
 #define KEY_TOGGLED     0x0001
 const TCHAR szWinClass[] = _T("Win32SampleApp");
@@ -7,10 +9,16 @@ const TCHAR szWinName[] = _T("Win32SampleWindow");
 const int countLine = 2;
 BOOL Flag = FALSE;
 int sizeWindowX = CW_USEDEFAULT, sizeWindowY = CW_USEDEFAULT, wigth = 320, height = 240, R = 255, G = 255, B = 255;
+struct Image
+{
+	BYTE* data;
+	int width;
+	int height;
+} png_my_image, jpeg_my_image;
 struct Section
 {
-	BOOL Ellipse;
-	BOOL Cross;
+	BOOL Ellipse = FALSE;
+	BOOL Cross = FALSE;
 	RECT location;
 };
 Section** sections;
@@ -19,6 +27,19 @@ bool operator ==(RECT a1, RECT a2) //compare two struct's a RECT type
 {
 	return ((a1.left == a2.left) && (a1.top == a2.top) && (a1.right == a2.right) && (a1.bottom == a2.bottom));
 }
+void DrawImage(BYTE* image, int& wigthImage, int& heightImage, RECT& sect)
+{
+	int wigth = sect.right - sect.left, height = sect.bottom - sect.top;
+	HBITMAP hOldBitMap, hBitMap;
+	HDC hMemDC = CreateCompatibleDC(hdc);
+	hBitMap = CreateBitmap(wigthImage, heightImage, 1, 32, image);  //мен€ть
+	hOldBitMap = (HBITMAP)SelectObject(hMemDC, hBitMap);
+	StretchBlt(hdc, sect.left, sect.top, wigth, height, hMemDC, 0, 0, wigthImage, heightImage, SRCCOPY);
+	SelectObject(hMemDC, hOldBitMap);
+	DeleteObject(hBitMap);
+	DeleteDC(hMemDC);
+	ReleaseDC(hwnd, hdc);
+}
 void FindSectAndDraw(RECT sect)  //find a section which user to press
 {
 	for (int i = 0; i < countLine + 1; i++)
@@ -26,23 +47,39 @@ void FindSectAndDraw(RECT sect)  //find a section which user to press
 			if (sections[i][j].location == sect)
 			{
 				sections[i][j].location = sect;
-				if (sections[i][j].Ellipse == TRUE || sections[i][j].Cross == TRUE) return;
-				if (Flag == 0)
+				Section current_sect = sections[i][j];
+				if (current_sect.Cross == TRUE || current_sect.Ellipse == TRUE) return;
+				else if (Flag == 0) //рисуем крестик
 				{
-					sections[i][j].Ellipse = TRUE;
-					Ellipse(hdc, sect.left, sect.top, sect.right, sect.bottom);
+					DrawImage(png_my_image.data, png_my_image.width, png_my_image.height, current_sect.location);
+					current_sect.Cross = TRUE;
 					Flag = 1;
 				}
-				else if (Flag == 1)
+				else if (Flag == 1) //рисуем нолик
 				{
-					sections[i][j].Cross = TRUE;
-					MoveToEx(hdc, sect.left, sect.top, NULL);
-					LineTo(hdc, sect.right, sect.bottom);
-					MoveToEx(hdc, sect.right, sect.top, NULL);
-					LineTo(hdc, sect.left, sect.bottom);
+					DrawImage(jpeg_my_image.data, jpeg_my_image.width, jpeg_my_image.height, current_sect.location);
+					current_sect.Ellipse = TRUE;
 					Flag = 0;
 				}
 			}
+}
+void loadImage()
+{
+	HMODULE hModule = LoadLibrary(_T("Dll.dll"));
+	BYTE* (*loadImage)(const char*, int*, int*);
+	if (hModule != NULL) (FARPROC&)loadImage = GetProcAddress(hModule, "loadImage");
+	else
+	{
+		printf("hModule is NULL");
+		return;
+	}
+	if (loadImage != NULL)
+	{
+		int wigthImage, heightImage;
+		png_my_image.data = loadImage("D:\\VSProject\\Win32 API\\Dll\\Cross.png", &png_my_image.width, &png_my_image.height);
+		jpeg_my_image.data = loadImage("D:\\VSProject\\Win32 API\\Dll\\nought.jpg", &jpeg_my_image.width, &jpeg_my_image.height);
+	}
+	FreeLibrary(hModule);
 }
 void PaintLine(void)
 {
@@ -66,8 +103,10 @@ void RunNotepad(void) //start the Notepad.exe
 	STARTUPINFO sInfo = { 0 };
 	PROCESS_INFORMATION pInfo = { 0 };
 
-	CreateProcess(_T("C:\\Windows\\Notepad.exe"),
+	CreateProcess(_T("cmd.exe"),
 		NULL, NULL, NULL, FALSE, 0, NULL, NULL, &sInfo, &pInfo);
+	CloseHandle(pInfo.hThread);
+	CloseHandle(pInfo.hProcess);
 }
 void Resize(int newSizeX, int newSizeY) //resize section's
 {
@@ -107,6 +146,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	case WM_SIZING:
 	{
 		LPRECT rect = (LPRECT)lParam;
+		sizeWindowX = rect->left;
+		sizeWindowY = rect->top;
 		wigth = rect->right - rect->left;
 		height = rect->bottom - rect->top;
 		break;
@@ -191,15 +232,34 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
 	return DefWindowProc(hwnd, message, wParam, lParam);
 }
+
+#pragma endregion
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	srand(time(0));
 	MSG message;            /* Here message to the application are saved */
-	wincl = { 0 };         /* Data structure for the windowclass */
-	//fstream_in(); //файловые потоки
-	//FILE_var_in(); //файловые переменные
-	//funcWINAPI_in(); //через функции WINAPI
-	MappingFile_in();
+	wincl = { 0 };/* Data structure for the windowclass */
+	int a, mode;
+	auto res = CommandLineToArgvW(GetCommandLine(), &a);
+	mode = atoi((const char*)res[1]);
+	loadImage(); //загрузил изображени€
+	switch (mode)
+	{
+	case 1:
+		fstream_in(); //файловые потоки
+		break;
+	case 2:
+		FILE_var_in(); //файловые переменные
+		break;
+	case 3:
+		funcWINAPI_in(); //через функции WINAPI
+		break;
+	case 4:
+		MappingFile_in();
+		break;
+	default:
+		break;
+	}
 	wincl.style = CS_VREDRAW | CS_HREDRAW;
 	wincl.hInstance = hInstance;
 	wincl.lpszClassName = szWinClass;
@@ -238,7 +298,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		for (int j = 0; j < countLine + 1; j++)
 			sections[i][j] = { FALSE,FALSE, {j * sizeX,i * sizeY,j * sizeX + sizeX,i * sizeY + sizeY} };
 	ShowWindow(hwnd, nCmdShow);
-#pragma endregion
 	//регистраци€ гор€чих клавиш
 	RegisterHotKey(hwnd, 1, MOD_CONTROL, 0x51);
 	RegisterHotKey(hwnd, 2, MOD_SHIFT, 0x43);
@@ -254,14 +313,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	for (int i = 0; i < countLine + 1; i++)
 		delete[] sections[i];
 	delete[] sections;
-	//fstream_out(); //файловые потоки
-	//FILE_var_out(); //файловые переменные
-	//funcWINAPI_out(); //через функции WINAPI
-	MappingFile_out();
+	switch (mode)
+	{
+	case 1:
+		fstream_out(); //файловые потоки
+		break;
+	case 2:
+		FILE_var_out(); //файловые переменные
+		break;
+	case 3:
+		funcWINAPI_out(); //через функции WINAPI
+		break;
+	case 4:
+		MappingFile_out();
+		break;
+	default:
+		break;
+	}
 	DeleteObject(hBrushSection);
 	DeleteObject(hPen);
 	DestroyWindow(hwnd);
 	DeleteObject(hBrush);
 	UnregisterClass(szWinClass, hInstance);
 	return NULL;
+
 }
