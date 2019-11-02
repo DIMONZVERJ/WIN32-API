@@ -1,6 +1,6 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
+﻿// dllmain.cpp : Определяет точку входа для приложения DLL.
+#define _CRT_SECURE_NO_WARNINGS
 #define PNG_BYTES_TO_CHECK 100
-// dllmain.cpp : Определяет точку входа для приложения DLL.
 #include "Dll.h"
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,

@@ -14,11 +14,12 @@ struct Image
 	BYTE* data;
 	int width;
 	int height;
+	BOOL load = true;
 } png_my_image, jpeg_my_image;
 struct Section
 {
-	BOOL Ellipse = FALSE;
-	BOOL Cross = FALSE;
+	BOOL Ellipse = false;
+	BOOL Cross = false;
 	RECT location;
 };
 Section** sections;
@@ -26,42 +27,6 @@ Section** sections;
 bool operator ==(RECT a1, RECT a2) //compare two struct's a RECT type
 {
 	return ((a1.left == a2.left) && (a1.top == a2.top) && (a1.right == a2.right) && (a1.bottom == a2.bottom));
-}
-void DrawImage(BYTE* image, int& wigthImage, int& heightImage, RECT& sect)
-{
-	int wigth = sect.right - sect.left, height = sect.bottom - sect.top;
-	HBITMAP hOldBitMap, hBitMap;
-	HDC hMemDC = CreateCompatibleDC(hdc);
-	hBitMap = CreateBitmap(wigthImage, heightImage, 1, 32, image);  //менять
-	hOldBitMap = (HBITMAP)SelectObject(hMemDC, hBitMap);
-	StretchBlt(hdc, sect.left, sect.top, wigth, height, hMemDC, 0, 0, wigthImage, heightImage, SRCCOPY);
-	SelectObject(hMemDC, hOldBitMap);
-	DeleteObject(hBitMap);
-	DeleteDC(hMemDC);
-	ReleaseDC(hwnd, hdc);
-}
-void FindSectAndDraw(RECT sect)  //find a section which user to press
-{
-	for (int i = 0; i < countLine + 1; i++)
-		for (int j = 0; j < countLine + 1; j++)
-			if (sections[i][j].location == sect)
-			{
-				sections[i][j].location = sect;
-				Section current_sect = sections[i][j];
-				if (current_sect.Cross == TRUE || current_sect.Ellipse == TRUE) return;
-				else if (Flag == 0) //рисуем крестик
-				{
-					DrawImage(png_my_image.data, png_my_image.width, png_my_image.height, current_sect.location);
-					current_sect.Cross = TRUE;
-					Flag = 1;
-				}
-				else if (Flag == 1) //рисуем нолик
-				{
-					DrawImage(jpeg_my_image.data, jpeg_my_image.width, jpeg_my_image.height, current_sect.location);
-					current_sect.Ellipse = TRUE;
-					Flag = 0;
-				}
-			}
 }
 void loadImage()
 {
@@ -81,7 +46,19 @@ void loadImage()
 	}
 	FreeLibrary(hModule);
 }
-void PaintLine(void)
+void DrawImage(BYTE* image, int& wigthImage, int& heightImage, RECT& sect)
+{
+	int wigth = sect.right - sect.left, height = sect.bottom - sect.top;
+	HBITMAP hOldBitMap, hBitMap;
+	HDC hMemDC = CreateCompatibleDC(hdc);
+	hBitMap = CreateBitmap(wigthImage, heightImage, 1, 32, image); 
+	hOldBitMap = (HBITMAP)SelectObject(hMemDC, hBitMap);
+	StretchBlt(hdc, sect.left, sect.top, wigth, height, hMemDC, 0, 0, wigthImage, heightImage, SRCCOPY);
+	SelectObject(hMemDC, hOldBitMap);
+	DeleteObject(hBitMap);
+	DeleteDC(hMemDC);
+}
+void PaintLine(void) //рисуем линии при загрузке окна
 {
 	GetClientRect(hwnd, &clientArea);
 	int currentPosX = 0, currentPosY = 0;
@@ -119,19 +96,76 @@ void Resize(int newSizeX, int newSizeY) //resize section's
 			sections[i][j].location.bottom = i * newSizeY + newSizeY;
 		}
 }
+void FindSectAndDraw(RECT sect)  //find a section which user to press
+{
+	hdc = GetDC(hwnd);
+	SelectObject(hdc, hBrushSection);
+	SelectObject(hdc, hPen);
+	for (int i = 0; i < countLine + 1; i++)
+	{
+		for (int j = 0; j < countLine + 1; j++)
+		{
+			if (sections[i][j].location == sect)
+			{
+				//if (sections[i][j].Cross == TRUE || sections[i][j].Ellipse == TRUE) return;
+				if (Flag == 0) //рисуем крестик
+				{
+					if (png_my_image.load == true) 
+						DrawImage(png_my_image.data, png_my_image.width, png_my_image.height, sections[i][j].location);
+					else
+					{
+						MoveToEx(hdc, sect.left, sect.top, NULL);
+						LineTo(hdc, sect.right, sect.bottom);
+						MoveToEx(hdc, sect.right, sect.top, NULL);
+						LineTo(hdc, sect.left, sect.bottom);
+					}
+					sections[i][j].Cross = TRUE;
+					Flag = 1;
+				}
+				else if (Flag == 1) //рисуем нолик
+				{
+					if (jpeg_my_image.load == true) 
+						DrawImage(jpeg_my_image.data, jpeg_my_image.width, jpeg_my_image.height, sections[i][j].location);
+					else
+					{
+						Ellipse(hdc, sect.left, sect.top, sect.right, sect.bottom);
+					}
+					sections[i][j].Ellipse = TRUE;
+					Flag = 0;
+				}
+			}
+		}
+	}
+	ReleaseDC(hwnd, hdc);
+}
 void Redraw(void) //redraw section's
 {
+	SelectObject(hdc, hPen);
+	SelectObject(hdc, hBrushSection);
 	for (int i = 0; i < countLine + 1; i++)
 		for (int j = 0; j < countLine + 1; j++)
 			if (sections[i][j].Ellipse == 1)
-				Ellipse(hdc, sections[i][j].location.left, sections[i][j].location.top, sections[i][j].location.right, sections[i][j].location.bottom);
+			{
+				if (jpeg_my_image.load == true)
+					DrawImage(jpeg_my_image.data, jpeg_my_image.width, jpeg_my_image.height, sections[i][j].location);
+				else
+				{
+					Ellipse(hdc, sections[i][j].location.left, sections[i][j].location.top, sections[i][j].location.right, sections[i][j].location.bottom);
+				}
+			}
 			else if (sections[i][j].Cross == 1)
 			{
-				MoveToEx(hdc, sections[i][j].location.left, sections[i][j].location.top, NULL);
-				LineTo(hdc, sections[i][j].location.right, sections[i][j].location.bottom);
-				MoveToEx(hdc, sections[i][j].location.right, sections[i][j].location.top, NULL);
-				LineTo(hdc, sections[i][j].location.left, sections[i][j].location.bottom);
+				if (png_my_image.load == true) 
+					DrawImage(png_my_image.data, png_my_image.width, png_my_image.height, sections[i][j].location);
+				else
+				{
+					MoveToEx(hdc, sections[i][j].location.left, sections[i][j].location.top, NULL);
+					LineTo(hdc, sections[i][j].location.right, sections[i][j].location.bottom);
+					MoveToEx(hdc, sections[i][j].location.right, sections[i][j].location.top, NULL);
+					LineTo(hdc, sections[i][j].location.left, sections[i][j].location.bottom);
+				}
 			}
+	ReleaseDC(hwnd, hdc);
 }
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -156,7 +190,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	{
 		RECT window;
 		hdc = GetDC(hwnd);
-		if (wParam == SIZE_MAXIMIZED)
+		if (wParam == SIZE_MAXIMIZED || wParam == SIZE_RESTORED)
 		{
 			GetWindowRect(hwnd, &window);
 			sizeWindowX = window.left;
@@ -166,18 +200,13 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 		}
 		sizeX = LOWORD(lParam) / (countLine + 1);
 		sizeY = HIWORD(lParam) / (countLine + 1);
-		SelectObject(hdc, hPen);
-		SelectObject(hdc, hBrushSection);
 		Resize(sizeX, sizeY);
 		Redraw();
-		ReleaseDC(hwnd, hdc);
+		return 0;
 	}
-	return 0;
 	case WM_PAINT:
 		hdc = BeginPaint(hwnd, &paint);
 		PaintLine();
-		SelectObject(hdc, hBrushSection);
-		SelectObject(hdc, hPen);
 		Redraw();
 		EndPaint(hwnd, &paint);
 		return 0;
@@ -196,15 +225,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	{
 		sizeX = clientArea.right / (countLine + 1);
 		sizeY = clientArea.bottom / (countLine + 1);
-		hdc = GetDC(hwnd);
 		int currentMouseX = GET_X_LPARAM(lParam); //текущая координата x мыши
 		int currentMouseY = GET_Y_LPARAM(lParam); //текущая координата y мыши
-		SelectObject(hdc, hBrushSection);
-		SelectObject(hdc, hPen);
 		RECT section = { (LONG)floor(currentMouseX / sizeX) * sizeX, (LONG)floor(currentMouseY / sizeY) * sizeY, ((LONG)floor(currentMouseX / sizeX) + 1) * sizeX, ((LONG)floor(currentMouseY / sizeY) + 1) * sizeY };
 		//нашли координаты
 		FindSectAndDraw(section);
-		ReleaseDC(hwnd, hdc);
 		return 0;
 	}
 	case WM_KEYUP: //сообщение отправляется, когда отжимается определённая клавиша
@@ -336,5 +361,4 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	DeleteObject(hBrush);
 	UnregisterClass(szWinClass, hInstance);
 	return NULL;
-
 }
