@@ -56,7 +56,12 @@ void funcWINAPI_in()
 		bool result = ReadFile(handle, buffer, MaxSizeBuf(), &d, NULL);
 		if (result == false)
 		{
-			MessageBox(NULL, _T("Ошибка при чтении данных. Будут использованы настройки по умолчанию"), NULL, MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+			MessageBox(
+				NULL,
+				("Ошибка при чтении данных (код ошибки: " + to_string(GetLastError()) + "). Будут использованы настройки по умолчанию").c_str(),
+				NULL,
+				MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY
+			);
 			CloseHandle(handle);
 			delete[] buffer;
 			return;
@@ -74,7 +79,12 @@ void funcWINAPI_out()
 	sprintf(buffer, "%d %d %d %d %d %d %d", temp[0], temp[1], temp[2], temp[3], temp[4], temp[5], temp[6]);
 	handle = CreateFile(_T("Text.txt"), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
-		MessageBox(NULL, _T("Ошибка при сохранении настроек. Если произошли изменения, они не сохранятся"),NULL, MB_OK |MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+		MessageBox(
+			NULL,
+			("Ошибка при сохранении настроек (код ошибки: " + to_string(GetLastError()) + "). Если произошли изменения, они не сохранятся").c_str(),
+			NULL,
+			MB_OK |MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY
+		);
 	else 
 		WriteFile(handle, buffer, strlen(buffer), &d, NULL);
 	CloseHandle(handle);
@@ -83,7 +93,12 @@ void funcWINAPI_out()
 void FILE_var_in()
 {
 	if ((file_var = fopen("Text.txt", "r")) == NULL)	
-		MessageBox(NULL, _T("Ошибка при чтении данных. Будут использованы настройки по умолчанию"), NULL, MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+		MessageBox(
+			NULL,
+			("Ошибка при чтении данных (код ошибки: " + to_string(GetLastError()) + "). Будут использованы настройки по умолчанию").c_str(),
+			NULL,
+			MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY
+		);
 	else
 	{
 		int numsucc = fscanf(file_var, "%d %d %d %d %d %d %d", &sizeWindowX, &sizeWindowY, &wigth, &height, &R, &G, &B);
@@ -93,7 +108,12 @@ void FILE_var_in()
 void FILE_var_out()
 {
 	if ((file_var = fopen("Text.txt", "w")) == NULL) 
-		MessageBox(NULL, _T("Ошибка при открытии файла"), NULL, MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+		MessageBox(
+			NULL,
+			("Ошибка при открытии файла (код ошибки: " + to_string(GetLastError()) +")").c_str(),
+			NULL,
+			MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY
+		);
 	else 
 	{
 		int numsucc = fprintf(file_var, "%d %d %d %d %d %d %d", sizeWindowX, sizeWindowY, wigth, height, R, G, B);
@@ -147,7 +167,12 @@ void MappingFile_out()
 	temp[0] = sizeWindowX; temp[1] = sizeWindowY; temp[2] = wigth; temp[3] = height; temp[4] = R; temp[5] = G; temp[6] = B;
 	handle_file = CreateFile(_T("Text.txt"), GENERIC_WRITE|GENERIC_READ, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle_file == INVALID_HANDLE_VALUE || handle_file == NULL)
-		MessageBox(NULL, _T("Ошибка при сохранении настроек. Если произошли изменения, они не сохранятся"), NULL, MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+		MessageBox(
+			NULL, 
+			("Ошибка при сохранении настроек (код ошибки: " + to_string(GetLastError()) + "). Если произошли изменения, они не сохранятся").c_str(),
+			NULL,
+			MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY
+		);
 	else
 	{
 		handle_map = CreateFileMapping(handle_file, NULL, PAGE_READWRITE, 0, max + 1, NULL);

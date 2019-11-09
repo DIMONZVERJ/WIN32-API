@@ -5,6 +5,8 @@
 #include <time.h>
 #include <fstream>
 #include <Windows.h>
+static ATOM id1;
+static ATOM id2;
 static HANDLE hMapSections; 
 static UINT MESSAGE;
 static RECT clientArea;

@@ -4,9 +4,13 @@
 
 #define KEY_SHIFTED     0x8000
 #define KEY_TOGGLED     0x0001
+using namespace std;
 const TCHAR szWinClass[] = _T("Win32SampleApp");
 const TCHAR szWinName[] = _T("Win32SampleWindow");
+const TCHAR mapName[] = _T("map");
+const TCHAR mess_name[] = _T("message");
 const int countLine = 2;
+const int sizeP = (countLine + 1) * (countLine + 1);
 BOOL Flag = FALSE;
 int sizeWindowX = CW_USEDEFAULT, sizeWindowY = CW_USEDEFAULT, wigth = 320, height = 240, R = 255, G = 255, B = 255;
 struct Image
@@ -23,7 +27,7 @@ struct Section
 	RECT location;
 };
 Section** sections;
-
+char* map_sections;
 bool operator ==(RECT a1, RECT a2) //compare two struct's a RECT type
 {
 	return ((a1.left == a2.left) && (a1.top == a2.top) && (a1.right == a2.right) && (a1.bottom == a2.bottom));
@@ -35,7 +39,7 @@ void loadImage()
 	if (hModule != NULL) (FARPROC&)loadImage = GetProcAddress(hModule, "loadImage");
 	else
 	{
-		printf("hModule is NULL");
+		MessageBox(hwnd,("Ошибка при загрузке библиотеки (код ошибки: " + to_string(GetLastError()) +")").c_str(),NULL,MB_ICONERROR);
 		return;
 	}
 	if (loadImage != NULL)
@@ -103,7 +107,7 @@ void Redraw(HWND hwnd) //redraw section's
 	SelectObject(hdc, hBrushSection);
 	for (int i = 0; i < countLine + 1; i++)
 		for (int j = 0; j < countLine + 1; j++)
-			if (sections[i][j].Ellipse == 1)
+			if (sections[i][j].Ellipse == 1 && map_sections[i*(countLine+1) + j] == 1)
 			{
 				if (jpeg_my_image.load == TRUE)
 					DrawImage(jpeg_my_image.data, jpeg_my_image.width, jpeg_my_image.height, sections[i][j].location);
@@ -112,7 +116,7 @@ void Redraw(HWND hwnd) //redraw section's
 					Ellipse(hdc, sections[i][j].location.left, sections[i][j].location.top, sections[i][j].location.right, sections[i][j].location.bottom);
 				}
 			}
-			else if (sections[i][j].Cross == 1)
+			else if (sections[i][j].Cross == 1 && map_sections[i*(countLine+1) + j] == 0)
 			{
 				if (png_my_image.load == TRUE)
 					DrawImage(png_my_image.data, png_my_image.width, png_my_image.height, sections[i][j].location);
@@ -128,6 +132,40 @@ void Redraw(HWND hwnd) //redraw section's
 }
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	if (message == MESSAGE)
+	{
+		hdc = GetDC(hwnd);
+		sizeX = (int)round(clientArea.right / (double(countLine) + 1));
+		sizeY = (int)round(clientArea.bottom / (double(countLine) + 1));
+		int currentMouseX = GET_X_LPARAM(lParam);
+		int currentMouseY = GET_Y_LPARAM(lParam);
+
+		int i = currentMouseY / sizeY;
+		int j = currentMouseX / sizeX;
+		if (map_sections[i*(countLine+1)+j] == -1)
+		{
+
+			if (Flag)
+			{
+				sections[i][j].Ellipse = TRUE;
+				map_sections[i*(countLine+1) + j] = 1;
+			}
+			else
+			{
+				sections[i][j].Cross = TRUE;
+				map_sections[i * (countLine + 1) + j] = 0;
+			}
+		}
+
+		for (int i = 0; i < countLine + 1; i++)
+			for (int j = 0; j < countLine + 1; j++)
+				if (map_sections[i * (countLine + 1) + j] == 0)
+					sections[i][j].Cross = TRUE;
+				else if (map_sections[i * (countLine + 1) + j] == 1)
+					sections[i][j].Ellipse = TRUE;
+		Flag = !Flag;
+		Redraw(hwnd);
+	}
 	switch (message)
 	{
 	case WM_MOVING:
@@ -168,31 +206,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 		EndPaint(hwnd, &paint);
 		return 0;
 	case WM_HOTKEY:
-		switch (wParam)
-		{
-		case 1: //ctrl+q
+		if (wParam == id1) //ctrl+q
 			PostQuitMessage(0);
-			break;
-		case 2: //shift+c
+		else if (wParam == id2) //shift+c
 			RunNotepad();
-			break;
-		}
 		return 0;
 	case WM_LBUTTONDOWN: 
 	{
-		hdc = GetDC(hwnd);
-		sizeX = (int)round(clientArea.right / (double(countLine) + 1));
-		sizeY = (int)round(clientArea.bottom / (double(countLine) + 1));
-		int currentMouseX = GET_X_LPARAM(lParam); 
-		int currentMouseY = GET_Y_LPARAM(lParam); 
-
-		int i = currentMouseY / sizeY;
-		int j = currentMouseX / sizeX;
-		if (sections[i][j].Cross == FALSE && sections[i][j].Ellipse == FALSE)
-			if (Flag) sections[i][j].Ellipse = TRUE;
-			else sections[i][j].Cross = TRUE;
-		Flag = !Flag;
-		Redraw(hwnd);
+		SendMessage(HWND_BROADCAST, MESSAGE, 0, lParam);
 		return 0;
 	}
 	case WM_KEYUP:
@@ -229,7 +250,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	MSG message;            /* Here message to the application are saved */
 	int a;
 	wincl = { 0 };/* Data structure for the windowclass */
-	auto res = CommandLineToArgvW(GetCommandLine(), &a);
+	auto res = CommandLineToArgvW(GetCommandLineW(), &a);
 	if (res[1] != NULL)
 	{
 		int mode = atoi((const char*)res[1]);
@@ -264,17 +285,17 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		return 0;
 	/* The class is registered, let's create the program*/
 	hwnd = CreateWindow(
-		szWinClass,          /* Classname */
-		szWinName,       /* Title Text */
-		WS_OVERLAPPEDWINDOW, /* default window */
-		sizeWindowX,       /* Windows decides the position */
-		sizeWindowY,       /* where the window ends up on the screen */
+		szWinClass,            /* Classname */
+		szWinName,             /* Title Text */
+		WS_OVERLAPPEDWINDOW,   /* default window */
+		sizeWindowX,           /* Windows decides the position */
+		sizeWindowY,           /* where the window ends up on the screen */
 		wigth,                 /* The programs width */
-		height,                 /* and height in pixels */
-		HWND_DESKTOP,        /* The window is a child-window to desktop */
-		NULL,                /* No menu */
-		hInstance,       /* Program Instance handler */
-		NULL                 /* No Window Creation data */
+		height,                /* and height in pixels */
+		HWND_DESKTOP,          /* The window is a child-window to desktop */
+		NULL,                  /* No menu */
+		hInstance,             /* Program Instance handler */
+		NULL                   /* No Window Creation data */
 	);
 	/* Make the window visible on the screen */
 	GetClientRect(hwnd, &clientArea);
@@ -290,9 +311,29 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		for (int j = 0; j < countLine + 1; j++)
 			sections[i][j] = { FALSE,FALSE, {j * sizeX,i * sizeY,j * sizeX + sizeX,i * sizeY + sizeY} };
 	ShowWindow(hwnd, nCmdShow);
-	//ðåãèñòðàöèÿ ãîðÿ÷èõ êëàâèø
-	RegisterHotKey(hwnd, 1, MOD_CONTROL, 0x51);
-	RegisterHotKey(hwnd, 2, MOD_SHIFT, 0x43);
+	MESSAGE = RegisterWindowMessage(mess_name);
+	hMapSections = CreateFileMapping(INVALID_HANDLE_VALUE, (LPSECURITY_ATTRIBUTES)NULL, PAGE_READWRITE, 0, sizeP, mapName);
+	if (hMapSections != NULL)
+	{
+		map_sections = (char*)MapViewOfFile(hMapSections, FILE_MAP_ALL_ACCESS, 0, 0, sizeP);
+		if (map_sections == NULL) exit(0);
+		if (GetLastError() != ERROR_ALREADY_EXISTS)
+			for (int i = 0; i < sizeP; i++)
+				map_sections[i] = -1;
+		else
+			for (int i = 0; i < countLine + 1; i++)
+				for (int j = 0; j < countLine + 1; j++)
+					if (map_sections[i * (countLine + 1) + j] == 0)
+						sections[i][j].Cross = TRUE;
+					else
+						sections[i][j].Ellipse = TRUE;
+	}
+	id1 = GlobalAddAtom(to_string(rand()%1001).c_str());
+	id2 = GlobalAddAtom(to_string(1000 + rand() % 1001).c_str());
+	BOOL res1 = RegisterHotKey(hwnd, id1, MOD_CONTROL | MOD_NOREPEAT, 0x51);
+	BOOL res2 = RegisterHotKey(hwnd, id2, MOD_SHIFT | MOD_NOREPEAT, 0x43);
+	//if (GetLastError() != 0)
+	//	MessageBox(hwnd, ("Ошибка при ркгистрации горячей клавиши (код ощибки: " + std::to_string(GetLastError()) + ")").c_str(), NULL, MB_ICONERROR);
 	/* Run the message loop. It will run until GetMessage() returns 0 */
 
 	while (GetMessage(&message, NULL, 0, 0))
@@ -301,6 +342,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		/* Send message to WindowProcedure */
 		DispatchMessage(&message);
 	}
+	UnmapViewOfFile(map_sections);
 	/* Cleanup stuff */
 	for (int i = 0; i < countLine + 1; i++)
 		delete[] sections[i];
@@ -326,7 +368,13 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 			fstream_out();
 		}
 	}
+	delete[] png_my_image.data;
+	delete[] jpeg_my_image.data;
+	GlobalDeleteAtom(id1);
+	GlobalDeleteAtom(id2);
+	LocalFree(res);
 	DeleteObject(hBrushSection);
+	DeleteDC(hdc);
 	DeleteObject(hPen);
 	DestroyWindow(hwnd);
 	DeleteObject(hBrush);
