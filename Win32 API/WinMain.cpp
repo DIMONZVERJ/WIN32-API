@@ -1,4 +1,4 @@
-#include "WinMain.h"
+п»ї#include "WinMain.h"
 #include "WorkFile.h"
 #pragma region  
 
@@ -11,15 +11,15 @@ BOOL Flag = FALSE;
 int sizeWindowX = CW_USEDEFAULT, sizeWindowY = CW_USEDEFAULT, wigth = 320, height = 240, R = 255, G = 255, B = 255;
 struct Image
 {
-	BYTE* data;
-	int width;
-	int height;
-	BOOL load = true;
+	BYTE* data = NULL;
+	int width = 0;
+	int height = 0;
+	BOOL load = FALSE;
 } png_my_image, jpeg_my_image;
 struct Section
 {
-	BOOL Ellipse = false;
-	BOOL Cross = false;
+	BOOL Ellipse = FALSE;
+	BOOL Cross = FALSE;
 	RECT location;
 };
 Section** sections;
@@ -40,9 +40,10 @@ void loadImage()
 	}
 	if (loadImage != NULL)
 	{
-		int wigthImage, heightImage;
-		png_my_image.data = loadImage("D:\\VSProject\\Win32 API\\Dll\\Cross.png", &png_my_image.width, &png_my_image.height);
-		jpeg_my_image.data = loadImage("D:\\VSProject\\Win32 API\\Dll\\nought.jpg", &jpeg_my_image.width, &jpeg_my_image.height);
+		if ((png_my_image.data = loadImage("D:\\VSProject\\Win32 API\\Dll\\Cross.png", &png_my_image.width, &png_my_image.height)) != NULL)
+			png_my_image.load = TRUE;
+		if ((jpeg_my_image.data = loadImage("D:\\VSProject\\Win32 API\\Dll\\nought.jpg", &jpeg_my_image.width, &jpeg_my_image.height)) != NULL)
+			jpeg_my_image.load = TRUE;
 	}
 	FreeLibrary(hModule);
 }
@@ -51,26 +52,26 @@ void DrawImage(BYTE* image, int& wigthImage, int& heightImage, RECT& sect)
 	int wigth = sect.right - sect.left, height = sect.bottom - sect.top;
 	HBITMAP hOldBitMap, hBitMap;
 	HDC hMemDC = CreateCompatibleDC(hdc);
-	hBitMap = CreateBitmap(wigthImage, heightImage, 1, 32, image); 
+	hBitMap = CreateBitmap(wigthImage, heightImage, 1, 32, image);
 	hOldBitMap = (HBITMAP)SelectObject(hMemDC, hBitMap);
 	StretchBlt(hdc, sect.left, sect.top, wigth, height, hMemDC, 0, 0, wigthImage, heightImage, SRCCOPY);
 	SelectObject(hMemDC, hOldBitMap);
 	DeleteObject(hBitMap);
 	DeleteDC(hMemDC);
 }
-void PaintLine(void) //рисуем линии при загрузке окна
+void PaintLine(void)
 {
 	GetClientRect(hwnd, &clientArea);
 	int currentPosX = 0, currentPosY = 0;
 	for (int i = 0; i < countLine; i++)
 	{
-		currentPosX += clientArea.right / (countLine + 1);
+		currentPosX += (int)round(clientArea.right / ((double)(countLine) + 1));
 		MoveToEx(hdc, currentPosX, 0, NULL);
 		LineTo(hdc, currentPosX, clientArea.bottom);
 	}
 	for (int i = 0; i < countLine; i++)
 	{
-		currentPosY += clientArea.bottom / (countLine + 1);
+		currentPosY += (int)round(clientArea.bottom / (double(countLine) + 1));
 		MoveToEx(hdc, 0, currentPosY, NULL);
 		LineTo(hdc, clientArea.right, currentPosY);
 	}
@@ -80,12 +81,12 @@ void RunNotepad(void) //start the Notepad.exe
 	STARTUPINFO sInfo = { 0 };
 	PROCESS_INFORMATION pInfo = { 0 };
 
-	CreateProcess(_T("cmd.exe"),
+	CreateProcess(_T("C:\\Windows\\Notepad.exe"),
 		NULL, NULL, NULL, FALSE, 0, NULL, NULL, &sInfo, &pInfo);
 	CloseHandle(pInfo.hThread);
 	CloseHandle(pInfo.hProcess);
 }
-void Resize(int newSizeX, int newSizeY) //resize section's
+void Resize(int &newSizeX, int &newSizeY) //resize section's
 {
 	for (int i = 0; i < countLine + 1; i++)
 		for (int j = 0; j < countLine + 1; j++)
@@ -96,49 +97,7 @@ void Resize(int newSizeX, int newSizeY) //resize section's
 			sections[i][j].location.bottom = i * newSizeY + newSizeY;
 		}
 }
-void FindSectAndDraw(RECT sect)  //find a section which user to press
-{
-	hdc = GetDC(hwnd);
-	SelectObject(hdc, hBrushSection);
-	SelectObject(hdc, hPen);
-	for (int i = 0; i < countLine + 1; i++)
-	{
-		for (int j = 0; j < countLine + 1; j++)
-		{
-			if (sections[i][j].location == sect)
-			{
-				//if (sections[i][j].Cross == TRUE || sections[i][j].Ellipse == TRUE) return;
-				if (Flag == 0) //рисуем крестик
-				{
-					if (png_my_image.load == true) 
-						DrawImage(png_my_image.data, png_my_image.width, png_my_image.height, sections[i][j].location);
-					else
-					{
-						MoveToEx(hdc, sect.left, sect.top, NULL);
-						LineTo(hdc, sect.right, sect.bottom);
-						MoveToEx(hdc, sect.right, sect.top, NULL);
-						LineTo(hdc, sect.left, sect.bottom);
-					}
-					sections[i][j].Cross = TRUE;
-					Flag = 1;
-				}
-				else if (Flag == 1) //рисуем нолик
-				{
-					if (jpeg_my_image.load == true) 
-						DrawImage(jpeg_my_image.data, jpeg_my_image.width, jpeg_my_image.height, sections[i][j].location);
-					else
-					{
-						Ellipse(hdc, sect.left, sect.top, sect.right, sect.bottom);
-					}
-					sections[i][j].Ellipse = TRUE;
-					Flag = 0;
-				}
-			}
-		}
-	}
-	ReleaseDC(hwnd, hdc);
-}
-void Redraw(void) //redraw section's
+void Redraw(HWND hwnd) //redraw section's
 {
 	SelectObject(hdc, hPen);
 	SelectObject(hdc, hBrushSection);
@@ -146,7 +105,7 @@ void Redraw(void) //redraw section's
 		for (int j = 0; j < countLine + 1; j++)
 			if (sections[i][j].Ellipse == 1)
 			{
-				if (jpeg_my_image.load == true)
+				if (jpeg_my_image.load == TRUE)
 					DrawImage(jpeg_my_image.data, jpeg_my_image.width, jpeg_my_image.height, sections[i][j].location);
 				else
 				{
@@ -155,7 +114,7 @@ void Redraw(void) //redraw section's
 			}
 			else if (sections[i][j].Cross == 1)
 			{
-				if (png_my_image.load == true) 
+				if (png_my_image.load == TRUE)
 					DrawImage(png_my_image.data, png_my_image.width, png_my_image.height, sections[i][j].location);
 				else
 				{
@@ -189,7 +148,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	case WM_SIZE:
 	{
 		RECT window;
-		hdc = GetDC(hwnd);
 		if (wParam == SIZE_MAXIMIZED || wParam == SIZE_RESTORED)
 		{
 			GetWindowRect(hwnd, &window);
@@ -198,16 +156,15 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 			wigth = window.right - window.left;
 			height = window.bottom - window.top;
 		}
-		sizeX = LOWORD(lParam) / (countLine + 1);
-		sizeY = HIWORD(lParam) / (countLine + 1);
+		sizeX = (int)round(LOWORD(lParam) / (double)(countLine + 1));
+		sizeY = (int)round(HIWORD(lParam) / (double)(countLine + 1));
 		Resize(sizeX, sizeY);
-		Redraw();
 		return 0;
 	}
 	case WM_PAINT:
 		hdc = BeginPaint(hwnd, &paint);
 		PaintLine();
-		Redraw();
+		Redraw(hwnd);
 		EndPaint(hwnd, &paint);
 		return 0;
 	case WM_HOTKEY:
@@ -221,18 +178,24 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 			break;
 		}
 		return 0;
-	case WM_LBUTTONDOWN: //при нажатии на левую кнопку мыши рисуется эллипс в выбранной секции
+	case WM_LBUTTONDOWN: 
 	{
-		sizeX = clientArea.right / (countLine + 1);
-		sizeY = clientArea.bottom / (countLine + 1);
-		int currentMouseX = GET_X_LPARAM(lParam); //текущая координата x мыши
-		int currentMouseY = GET_Y_LPARAM(lParam); //текущая координата y мыши
-		RECT section = { (LONG)floor(currentMouseX / sizeX) * sizeX, (LONG)floor(currentMouseY / sizeY) * sizeY, ((LONG)floor(currentMouseX / sizeX) + 1) * sizeX, ((LONG)floor(currentMouseY / sizeY) + 1) * sizeY };
-		//нашли координаты
-		FindSectAndDraw(section);
+		hdc = GetDC(hwnd);
+		sizeX = (int)round(clientArea.right / (double(countLine) + 1));
+		sizeY = (int)round(clientArea.bottom / (double(countLine) + 1));
+		int currentMouseX = GET_X_LPARAM(lParam); 
+		int currentMouseY = GET_Y_LPARAM(lParam); 
+
+		int i = currentMouseY / sizeY;
+		int j = currentMouseX / sizeX;
+		if (sections[i][j].Cross == FALSE && sections[i][j].Ellipse == FALSE)
+			if (Flag) sections[i][j].Ellipse = TRUE;
+			else sections[i][j].Cross = TRUE;
+		Flag = !Flag;
+		Redraw(hwnd);
 		return 0;
 	}
-	case WM_KEYUP: //сообщение отправляется, когда отжимается определённая клавиша
+	case WM_KEYUP:
 		switch (wParam)
 		{
 		case VK_ESCAPE: //esc
@@ -259,39 +222,42 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 }
 
 #pragma endregion
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
-	srand(time(0));
+	loadImage();
+	srand((unsigned int)time(0));
 	MSG message;            /* Here message to the application are saved */
+	int a;
 	wincl = { 0 };/* Data structure for the windowclass */
-	int a, mode;
 	auto res = CommandLineToArgvW(GetCommandLine(), &a);
-	mode = atoi((const char*)res[1]);
-	loadImage(); //загрузил изображения
-	switch (mode)
+	if (res[1] != NULL)
 	{
-	case 1:
-		fstream_in(); //файловые потоки
-		break;
-	case 2:
-		FILE_var_in(); //файловые переменные
-		break;
-	case 3:
-		funcWINAPI_in(); //через функции WINAPI
-		break;
-	case 4:
-		MappingFile_in();
-		break;
-	default:
-		break;
+		int mode = atoi((const char*)res[1]);
+		switch (mode)
+		{
+		case 1:
+			fstream_in();
+			break;
+		case 2:
+			FILE_var_in();
+			break;
+		case 3:
+			funcWINAPI_in();
+			break;
+		case 4:
+			MappingFile_in();
+			break;
+		default:
+			fstream_in();
+		}
 	}
 	wincl.style = CS_VREDRAW | CS_HREDRAW;
 	wincl.hInstance = hInstance;
 	wincl.lpszClassName = szWinClass;
 	wincl.lpfnWndProc = WindowProcedure;
-	hBrush = CreateSolidBrush(RGB(R, G, B)); //кисть для фона
-	hBrushSection = CreateSolidBrush(RGB(33, 189, 207)); //кисть для рисования кругов
-	hPen = CreatePen(PS_SOLID, 2, RGB(24, 240, 60)); //перо для рисования кругов
+	hBrush = CreateSolidBrush(RGB(R, G, B)); //ГЄГЁГ±ГІГј Г¤Г«Гї ГґГ®Г­Г 
+	hBrushSection = CreateSolidBrush(RGB(33, 189, 207)); //ГЄГЁГ±ГІГј Г¤Г«Гї Г°ГЁГ±Г®ГўГ Г­ГЁГї ГЄГ°ГіГЈГ®Гў
+	hPen = CreatePen(PS_SOLID, 2, RGB(24, 240, 60)); //ГЇГҐГ°Г® Г¤Г«Гї Г°ГЁГ±Г®ГўГ Г­ГЁГї ГЄГ°ГіГЈГ®Гў
 	wincl.hbrBackground = hBrush;
 	/* Register the window class, and if it fails quit the program */
 	if (!RegisterClass(&wincl))
@@ -313,8 +279,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	/* Make the window visible on the screen */
 	GetClientRect(hwnd, &clientArea);
 	GetWindowRect(hwnd, &rect); sizeWindowX = rect.left; sizeWindowY = rect.top;
-	sizeX = clientArea.right / (countLine + 1); //size of a rectangle horizontally
-	sizeY = clientArea.bottom / (countLine + 1); //size of a rectangle vertically
+	hdc = GetDC(hwnd);
+	sizeX = (int)round(clientArea.right / (double(countLine) + 1)); //size of a rectangle horizontally
+	sizeY = (int)round(clientArea.bottom / (double(countLine) + 1)); //size of a rectangle vertically
 	/*array rectangle initialization*/
 	sections = new Section * [countLine + 1];
 	for (int i = 0; i < countLine + 1; i++)
@@ -323,7 +290,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		for (int j = 0; j < countLine + 1; j++)
 			sections[i][j] = { FALSE,FALSE, {j * sizeX,i * sizeY,j * sizeX + sizeX,i * sizeY + sizeY} };
 	ShowWindow(hwnd, nCmdShow);
-	//регистрация горячих клавиш
+	//Г°ГҐГЈГЁГ±ГІГ°Г Г¶ГЁГї ГЈГ®Г°ГїГ·ГЁГµ ГЄГ«Г ГўГЁГё
 	RegisterHotKey(hwnd, 1, MOD_CONTROL, 0x51);
 	RegisterHotKey(hwnd, 2, MOD_SHIFT, 0x43);
 	/* Run the message loop. It will run until GetMessage() returns 0 */
@@ -338,22 +305,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	for (int i = 0; i < countLine + 1; i++)
 		delete[] sections[i];
 	delete[] sections;
-	switch (mode)
+	if (res[1] != NULL)
 	{
-	case 1:
-		fstream_out(); //файловые потоки
-		break;
-	case 2:
-		FILE_var_out(); //файловые переменные
-		break;
-	case 3:
-		funcWINAPI_out(); //через функции WINAPI
-		break;
-	case 4:
-		MappingFile_out();
-		break;
-	default:
-		break;
+		int mode = atoi((const char*)res[1]);
+		switch (mode)
+		{
+		case 1:
+			fstream_out(); //ГґГ Г©Г«Г®ГўГ»ГҐ ГЇГ®ГІГ®ГЄГЁ
+			break;
+		case 2:
+			FILE_var_out(); //ГґГ Г©Г«Г®ГўГ»ГҐ ГЇГҐГ°ГҐГ¬ГҐГ­Г­Г»ГҐ
+			break;
+		case 3:
+			funcWINAPI_out(); //Г·ГҐГ°ГҐГ§ ГґГіГ­ГЄГ¶ГЁГЁ WINAPI
+			break;
+		case 4:
+			MappingFile_out();
+			break;
+		default:
+			fstream_out();
+		}
 	}
 	DeleteObject(hBrushSection);
 	DeleteObject(hPen);

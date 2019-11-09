@@ -20,10 +20,9 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
 BYTE* loadImage(const char* fileName, int* width, int* height)
 {
-	if (check_if_png(fileName) == true)
+	if (check_if_png(fileName) == true) //проверяем что это формат png
 	{
-		BYTE* res = (BYTE*)ReadImagePNG(fileName, width, height);
-		return res;
+		return (BYTE*)ReadImagePNG(fileName, width, height);
 	}
 	else
 	{
@@ -49,11 +48,10 @@ bool check_if_png(const char* file_name)
 png_bytep ReadImagePNG(const char* fileName, int* width, int* height)
 {
 	png_bytep buffer;
-	png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-	png_infop info_ptr = png_create_info_struct(png_ptr);
 	png_image image;
 	memset(&image, 0, (sizeof image));
 	image.version = PNG_IMAGE_VERSION;
+
 	if (png_image_begin_read_from_file(&image, fileName) != 0)
 	{
 		image.format = PNG_FORMAT_BGRA;
@@ -94,9 +92,9 @@ BYTE* read_JPEG_file(const char* filename, int* width, int* height)
 	*width = cinfo.output_width;
 	*height = cinfo.output_height;
 	size_image = cinfo.output_height * cinfo.output_width * cinfo.output_components;
-	BYTE* temp_buffer = new BYTE[size_image];
-	buffer = new BYTE[size_image];
 	int step = cinfo.output_width * cinfo.output_components;
+	BYTE* temp_buffer = new BYTE[step];
+	buffer = new BYTE[size_image];
 	int count_step = 0;
 	while (cinfo.output_scanline < cinfo.output_height) {
 		jpeg_read_scanlines(&cinfo, &temp_buffer, 1);
