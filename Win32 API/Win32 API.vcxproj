@@ -146,10 +146,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Animation.cpp" />
     <ClCompile Include="WinMain.cpp" />
     <ClCompile Include="WorkFile.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Animation.h" />
     <ClInclude Include="WinMain.h" />
     <ClInclude Include="WorkFile.h" />
   </ItemGroup>

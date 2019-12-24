@@ -10,6 +10,7 @@ extern int height;
 extern int R;
 extern int G;
 extern int B;
+extern int size_field;
 int MaxSizeBuf()
 {
 	int heightMonitor = GetSystemMetrics(SM_CYSCREEN);
@@ -20,7 +21,7 @@ int MaxSizeBuf()
 	int MaxG = 255;
 	int MaxB = 255;
 	string s = to_string(heightMonitor) + " " + to_string(wightMonitor) + " " + to_string(MaxWight)
-		+ " " + to_string(MaxHeight) + " " + to_string(MaxR) + " " + to_string(MaxG) + " " + to_string(MaxB);
+		+ " " + to_string(MaxHeight) + " " + to_string(MaxR) + " " + to_string(MaxG) + " " + to_string(MaxB) + to_string(wightMonitor);
 	return s.length();
 }
 void ParseToInt(char buffer[], int temp[])
@@ -67,7 +68,7 @@ void funcWINAPI_in()
 			return;
 		}
 		ParseToInt(buffer, temp);
-		sizeWindowX = temp[0]; sizeWindowY = temp[1]; wigth = temp[2]; height = temp[3]; R = temp[4]; G = temp[5]; B = temp[6];
+		sizeWindowX = temp[0]; sizeWindowY = temp[1]; wigth = temp[2]; height = temp[3]; R = temp[4]; G = temp[5]; B = temp[6]; size_field = temp[7];
 		delete[] buffer;
 	}
 	if (handle != NULL) CloseHandle(handle);
@@ -75,8 +76,8 @@ void funcWINAPI_in()
 void funcWINAPI_out()
 {
 	buffer = new char[MaxSizeBuf()];
-	temp[0] = sizeWindowX; temp[1] = sizeWindowY; temp[2] = wigth; temp[3] = height; temp[4] = R; temp[5] = G; temp[6] = B;
-	sprintf(buffer, "%d %d %d %d %d %d %d", temp[0], temp[1], temp[2], temp[3], temp[4], temp[5], temp[6]);
+	temp[0] = sizeWindowX; temp[1] = sizeWindowY; temp[2] = wigth; temp[3] = height; temp[4] = R; temp[5] = G; temp[6] = B; temp[7] = size_field;
+	sprintf(buffer, "%d %d %d %d %d %d %d %d", temp[0], temp[1], temp[2], temp[3], temp[4], temp[5], temp[6], temp[7]);
 	handle = CreateFile(_T("Text.txt"), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
 		MessageBox(
@@ -101,7 +102,7 @@ void FILE_var_in()
 		);
 	else
 	{
-		int numsucc = fscanf(file_var, "%d %d %d %d %d %d %d", &sizeWindowX, &sizeWindowY, &wigth, &height, &R, &G, &B);
+		int numsucc = fscanf(file_var, "%d %d %d %d %d %d %d %d", &sizeWindowX, &sizeWindowY, &wigth, &height, &R, &G, &B, &size_field);
 		fclose(file_var); //файловые переменные
 	}
 }
@@ -116,7 +117,7 @@ void FILE_var_out()
 		);
 	else 
 	{
-		int numsucc = fprintf(file_var, "%d %d %d %d %d %d %d", sizeWindowX, sizeWindowY, wigth, height, R, G, B);
+		int numsucc = fprintf(file_var, "%d %d %d %d %d %d %d %d", sizeWindowX, sizeWindowY, wigth, height, R, G, B, size_field);
 		fclose(file_var); //фаловые переменные 
 	}
 }
@@ -128,14 +129,14 @@ void fstream_in()
 	if (!s.empty())
 	{
 		file.seekg(0, ios::beg);
-		file >> sizeWindowX >> sizeWindowY >> wigth >> height >> R >> G >> B;
+		file >> sizeWindowX >> sizeWindowY >> wigth >> height >> R >> G >> B >> size_field;
 	}
 	file.close(); //файловые потоки
 }
 void fstream_out()
 {
 	file.open("Text.txt", ios_base::out | ios_base::trunc);
-	file << sizeWindowX << " " << sizeWindowY << " " << wigth << " " << height << " " << R << " " << G << " " << B;
+	file << sizeWindowX << " " << sizeWindowY << " " << wigth << " " << height << " " << R << " " << G << " " << B << " " << size_field;
 	file.close(); //файловые потоки 
 }
 void MappingFile_in()
@@ -153,7 +154,7 @@ void MappingFile_in()
 			if (buffer != NULL)
 			{
 				ParseToInt(buffer, temp);
-				sizeWindowX = temp[0]; sizeWindowY = temp[1]; wigth = temp[2]; height = temp[3]; R = temp[4]; G = temp[5]; B = temp[6];
+				sizeWindowX = temp[0]; sizeWindowY = temp[1]; wigth = temp[2]; height = temp[3]; R = temp[4]; G = temp[5]; B = temp[6]; size_field = temp[7];
 				UnmapViewOfFile(buffer);
 			}
 			CloseHandle(handle_map);
@@ -164,7 +165,7 @@ void MappingFile_in()
 void MappingFile_out()
 {
 	int max = MaxSizeBuf();
-	temp[0] = sizeWindowX; temp[1] = sizeWindowY; temp[2] = wigth; temp[3] = height; temp[4] = R; temp[5] = G; temp[6] = B;
+	temp[0] = sizeWindowX; temp[1] = sizeWindowY; temp[2] = wigth; temp[3] = height; temp[4] = R; temp[5] = G; temp[6] = B; temp[7] = size_field;
 	handle_file = CreateFile(_T("Text.txt"), GENERIC_WRITE|GENERIC_READ, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle_file == INVALID_HANDLE_VALUE || handle_file == NULL)
 		MessageBox(
@@ -181,7 +182,7 @@ void MappingFile_out()
 			buffer = (char*)MapViewOfFile(handle_map, FILE_MAP_WRITE, 0, 0, max);
 			if (buffer != NULL)
 			{
-				sprintf(buffer, "%d %d %d %d %d %d %d", temp[0], temp[1], temp[2], temp[3], temp[4], temp[5], temp[6]);
+				sprintf(buffer, "%d %d %d %d %d %d %d %d", temp[0], temp[1], temp[2], temp[3], temp[4], temp[5], temp[6], temp[7]);
 				UnmapViewOfFile(buffer);
 			}
 			CloseHandle(handle_map);

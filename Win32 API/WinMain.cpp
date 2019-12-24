@@ -1,85 +1,14 @@
 ﻿#include "WinMain.h"
 #include "WorkFile.h"
-#pragma region  
-
+#include "Animation.h"
 #define KEY_SHIFTED     0x8000
 #define KEY_TOGGLED     0x0001
 using namespace std;
+const int id1 = 1, id2 = 2, id3 = 3;
 const TCHAR szWinClass[] = _T("Win32SampleApp");
-const TCHAR szWinName[] = _T("Win32SampleWindow");
-const TCHAR mapName[] = _T("map");
-const TCHAR mess_name[] = _T("message");
-const int countLine = 2;
-const int sizeP = (countLine + 1) * (countLine + 1);
-BOOL Flag = FALSE;
-int sizeWindowX = CW_USEDEFAULT, sizeWindowY = CW_USEDEFAULT, wigth = 320, height = 240, R = 255, G = 255, B = 255;
-struct Image
-{
-	BYTE* data = NULL;
-	int width = 0;
-	int height = 0;
-	BOOL load = FALSE;
-} png_my_image, jpeg_my_image;
-struct Section
-{
-	BOOL Ellipse = FALSE;
-	BOOL Cross = FALSE;
-	RECT location;
-};
-Section** sections;
-char* map_sections;
-bool operator ==(RECT a1, RECT a2) //compare two struct's a RECT type
-{
-	return ((a1.left == a2.left) && (a1.top == a2.top) && (a1.right == a2.right) && (a1.bottom == a2.bottom));
-}
-void loadImage()
-{
-	HMODULE hModule = LoadLibrary(_T("Dll.dll"));
-	BYTE* (*loadImage)(const char*, int*, int*);
-	if (hModule != NULL) (FARPROC&)loadImage = GetProcAddress(hModule, "loadImage");
-	else
-	{
-		MessageBox(hwnd,("Ошибка при загрузке библиотеки (код ошибки: " + to_string(GetLastError()) +")").c_str(),NULL,MB_ICONERROR);
-		return;
-	}
-	if (loadImage != NULL)
-	{
-		if ((png_my_image.data = loadImage("D:\\VSProject\\Win32 API\\Dll\\Cross.png", &png_my_image.width, &png_my_image.height)) != NULL)
-			png_my_image.load = TRUE;
-		if ((jpeg_my_image.data = loadImage("D:\\VSProject\\Win32 API\\Dll\\nought.jpg", &jpeg_my_image.width, &jpeg_my_image.height)) != NULL)
-			jpeg_my_image.load = TRUE;
-	}
-	FreeLibrary(hModule);
-}
-void DrawImage(BYTE* image, int& wigthImage, int& heightImage, RECT& sect)
-{
-	int wigth = sect.right - sect.left, height = sect.bottom - sect.top;
-	HBITMAP hOldBitMap, hBitMap;
-	HDC hMemDC = CreateCompatibleDC(hdc);
-	hBitMap = CreateBitmap(wigthImage, heightImage, 1, 32, image);
-	hOldBitMap = (HBITMAP)SelectObject(hMemDC, hBitMap);
-	StretchBlt(hdc, sect.left, sect.top, wigth, height, hMemDC, 0, 0, wigthImage, heightImage, SRCCOPY);
-	SelectObject(hMemDC, hOldBitMap);
-	DeleteObject(hBitMap);
-	DeleteDC(hMemDC);
-}
-void PaintLine(void)
-{
-	GetClientRect(hwnd, &clientArea);
-	int currentPosX = 0, currentPosY = 0;
-	for (int i = 0; i < countLine; i++)
-	{
-		currentPosX += (int)round(clientArea.right / ((double)(countLine) + 1));
-		MoveToEx(hdc, currentPosX, 0, NULL);
-		LineTo(hdc, currentPosX, clientArea.bottom);
-	}
-	for (int i = 0; i < countLine; i++)
-	{
-		currentPosY += (int)round(clientArea.bottom / (double(countLine) + 1));
-		MoveToEx(hdc, 0, currentPosY, NULL);
-		LineTo(hdc, clientArea.right, currentPosY);
-	}
-}
+TCHAR* szWinName;
+int sizeWindowX = CW_USEDEFAULT, sizeWindowY = CW_USEDEFAULT, wigth = 320, height = 240, R = 255, G = 255, B = 255, size_field = 3;
+LPWSTR* res;
 void RunNotepad(void) //start the Notepad.exe 
 {
 	STARTUPINFO sInfo = { 0 };
@@ -90,81 +19,147 @@ void RunNotepad(void) //start the Notepad.exe
 	CloseHandle(pInfo.hThread);
 	CloseHandle(pInfo.hProcess);
 }
-void Resize(int &newSizeX, int &newSizeY) //resize section's
+void SaveSetting()
 {
-	for (int i = 0; i < countLine + 1; i++)
-		for (int j = 0; j < countLine + 1; j++)
-		{
-			sections[i][j].location.left = j * newSizeX;
-			sections[i][j].location.top = i * newSizeY;
-			sections[i][j].location.right = j * newSizeX + newSizeX;
-			sections[i][j].location.bottom = i * newSizeY + newSizeY;
-		}
+	int mode = 0;
+	if (res[1] != NULL)
+	{
+		mode = atoi((const char*)res[1]);
+	}
+	switch (mode)
+	{
+	case 1:
+		fstream_out(); //файловые потоки
+		break;
+	case 2:
+		FILE_var_out(); //файловые переменные
+		break;
+	case 3:
+		funcWINAPI_out(); //Функции winAPI
+		break;
+	case 4:
+		MappingFile_out(); //отображение на память
+		break;
+	default:
+		funcWINAPI_out();
+	}
 }
-void Redraw(HWND hwnd) //redraw section's
+int row_check(char** array, int& y)
 {
-	SelectObject(hdc, hPen);
-	SelectObject(hdc, hBrushSection);
-	for (int i = 0; i < countLine + 1; i++)
-		for (int j = 0; j < countLine + 1; j++)
-			if (sections[i][j].Ellipse == 1 && map_sections[i*(countLine+1) + j] == 1)
-			{
-				if (jpeg_my_image.load == TRUE)
-					DrawImage(jpeg_my_image.data, jpeg_my_image.width, jpeg_my_image.height, sections[i][j].location);
-				else
-				{
-					Ellipse(hdc, sections[i][j].location.left, sections[i][j].location.top, sections[i][j].location.right, sections[i][j].location.bottom);
-				}
-			}
-			else if (sections[i][j].Cross == 1 && map_sections[i*(countLine+1) + j] == 0)
-			{
-				if (png_my_image.load == TRUE)
-					DrawImage(png_my_image.data, png_my_image.width, png_my_image.height, sections[i][j].location);
-				else
-				{
-					MoveToEx(hdc, sections[i][j].location.left, sections[i][j].location.top, NULL);
-					LineTo(hdc, sections[i][j].location.right, sections[i][j].location.bottom);
-					MoveToEx(hdc, sections[i][j].location.right, sections[i][j].location.top, NULL);
-					LineTo(hdc, sections[i][j].location.left, sections[i][j].location.bottom);
-				}
-			}
-	ReleaseDC(hwnd, hdc);
+	int sum = 0;
+	int i, j;
+	for (i = y, j = 0; j < size_field; j++)
+		if (array[i][j] == 1)
+			sum++;
+		else if (array[i][j] == 0)
+			sum--;
+	if (sum == size_field) return 1;
+	if (sum == -size_field) return -1;
+	return 0;
+}
+int column_check(char** array, int& x)
+{
+	int sum = 0;
+	int i, j;
+	for (j = x, i = 0; i < size_field; i++)
+		if (array[i][j] == 1)
+			sum++;
+		else if (array[i][j] == 0)
+			sum--;
+	if (sum == size_field) return 1;
+	if (sum == -size_field) return -1;
+	return 0;
+}
+int diagonal_check(char** array, int& x, int& y)
+{
+	int sum = 0;
+	int i, j;
+	if (x == y)
+	{
+		for (i = 0, j = 0; i < size_field; i++, j++)
+			if (array[i][j] == 1) sum++;
+			else if (array[i][j] == 0) sum--;
+	}
+	if (sum == size_field) return 1;
+	if (sum == -size_field) return -1;
+	return 0;
+}
+int antidiagonal_check(char** array, int& x, int& y)
+{
+	int sum = 0;
+	int i, j;
+	if (x + y == size_field-1)
+	{
+		for (i = 0, j = size_field - 1; i < size_field; i++, j--)
+			if (array[i][j] == 1) sum++;
+			else if (array[i][j] == 0) sum--;
+	}
+	if (sum == size_field) return 1;
+	if (sum == -size_field) return -1;
+	return 0;
+}
+bool fill_pole(char** array)
+{
+	for (int i = 0; i < size_field; i++)
+		for (int j = 0; j < size_field; j++)
+			if (array[i][j] == -1)
+				return false;
+	return true;
+}
+void EndGameCheck(int& x, int& y)
+{
+	int sum = 0;
+	char* one_dimensional_array = GetMapSection();
+	char** two_dimensional_array = new char* [size_field];
+	int i, j;
+	for (i = 0; i < size_field; i++)
+		two_dimensional_array[i] = new char[size_field];
+	for (i = 0; i < size_field; i++)
+		for (j = 0; j < size_field; j++)
+			two_dimensional_array[i][j] = one_dimensional_array[i * size_field + j];
+	short r = row_check(two_dimensional_array, y);
+	short c = column_check(two_dimensional_array, x);
+	short d = diagonal_check(two_dimensional_array, x, y);
+	short anti_d = antidiagonal_check(two_dimensional_array, x, y);
+	bool fill = fill_pole(two_dimensional_array);
+	if (abs(r) == 1 || abs(c) == 1 || abs(d) == 1 || abs(anti_d) == 1 || fill == true)
+	{
+		if (r == 1 || c == 1 ||	d == 1 || anti_d == 1)
+		{
+			win = "Победили нолики";
+		}
+		else if (r == -1 || c == -1 || d == -1 || anti_d == -1)
+		{
+			win = "Победили крестики";
+		}
+		else if (fill == true)
+		{
+			win = "Ничья";
+		}
+		for (i = 0; i < size_field; i++)
+			delete[] two_dimensional_array[i];
+		delete[] two_dimensional_array;
+		if (WaitForSingleObject(semaphore_one_winner, 0) == WAIT_TIMEOUT) return;
+		MessageBox(NULL, win.c_str(), "Notification", MB_OK);
+		ReleaseSemaphore(semaphore_one_winner,1,NULL); //чтобы не показывало два уведомления о победе
+		SendMessage(HWND_BROADCAST, MESSAGE_EXIT, NULL, NULL);
+	}
 }
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	if (message == MESSAGE)
+	if (message == MESSAGE_EXIT)
+	{
+		PostQuitMessage(0);
+	}
+	else if (message == MESSAGE_HOTKEY)
+	{
+		res_regist_hotkey_1 = RegisterHotKey(hwnd, id1, MOD_CONTROL | MOD_NOREPEAT, 0x51);
+		res_regist_hotkey_2 = RegisterHotKey(hwnd, id2, MOD_SHIFT | MOD_NOREPEAT, 0x43);
+	}
+	else if (message == MESSAGE)
 	{
 		hdc = GetDC(hwnd);
-		sizeX = (int)round(clientArea.right / (double(countLine) + 1));
-		sizeY = (int)round(clientArea.bottom / (double(countLine) + 1));
-		int currentMouseX = GET_X_LPARAM(lParam);
-		int currentMouseY = GET_Y_LPARAM(lParam);
-
-		int i = currentMouseY / sizeY;
-		int j = currentMouseX / sizeX;
-		if (map_sections[i*(countLine+1)+j] == -1)
-		{
-
-			if (Flag)
-			{
-				sections[i][j].Ellipse = TRUE;
-				map_sections[i*(countLine+1) + j] = 1;
-			}
-			else
-			{
-				sections[i][j].Cross = TRUE;
-				map_sections[i * (countLine + 1) + j] = 0;
-			}
-		}
-
-		for (int i = 0; i < countLine + 1; i++)
-			for (int j = 0; j < countLine + 1; j++)
-				if (map_sections[i * (countLine + 1) + j] == 0)
-					sections[i][j].Cross = TRUE;
-				else if (map_sections[i * (countLine + 1) + j] == 1)
-					sections[i][j].Ellipse = TRUE;
-		Flag = !Flag;
-		Redraw(hwnd);
+		Redraw(hwnd, hdc, hPen,hBrush);
 	}
 	switch (message)
 	{
@@ -194,91 +189,180 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 			wigth = window.right - window.left;
 			height = window.bottom - window.top;
 		}
-		sizeX = (int)round(LOWORD(lParam) / (double)(countLine + 1));
-		sizeY = (int)round(HIWORD(lParam) / (double)(countLine + 1));
+		sizeX = (int)round(LOWORD(lParam) / ((double)(size_field)));
+		sizeY = (int)round(HIWORD(lParam) / ((double)(size_field)));
 		Resize(sizeX, sizeY);
 		return 0;
 	}
 	case WM_PAINT:
 		hdc = BeginPaint(hwnd, &paint);
-		PaintLine();
-		Redraw(hwnd);
+		PaintLine(hwnd,hdc);
+		Redraw(hwnd, hdc, hPen, hBrush);
 		EndPaint(hwnd, &paint);
 		return 0;
 	case WM_HOTKEY:
 		if (wParam == id1) //ctrl+q
+		{
 			PostQuitMessage(0);
+		}
 		else if (wParam == id2) //shift+c
 			RunNotepad();
 		return 0;
 	case WM_LBUTTONDOWN: 
 	{
+		sizeX = (int)round(clientArea.right / (double(size_field)));
+		sizeY = (int)round(clientArea.bottom / (double(size_field)));
+		int currentMouseX = GET_X_LPARAM(lParam);
+		int currentMouseY = GET_Y_LPARAM(lParam);
+		int i = currentMouseY / sizeY;
+		int j = currentMouseX / sizeX;
+		char* map_sections = GetMapSection();
+		if (WaitForSingleObject(semaphore_one_winner, 0) == WAIT_TIMEOUT) return 0;
+		else ReleaseSemaphore(semaphore_one_winner, 1, NULL);
+		if (WaitForSingleObject(hEvent, 0) == WAIT_TIMEOUT) return 0;
+		if (map_sections[i * size_field + j] == -1)
+		{
+			//if (WaitForSingleObject(semaphore_one_winner, 0) == WAIT_TIMEOUT) return 0;
+			//else ReleaseSemaphore(semaphore_one_winner, 1, NULL);
+			//if (WaitForSingleObject(hEvent1, 0) == WAIT_TIMEOUT) return 0;
+			if (szWinName == "Player 1")
+			{
+				if (WaitForSingleObject(player1,0)==WAIT_TIMEOUT)
+				{
+					map_sections[i * size_field + j] = 1;
+					SetEvent(player1);
+					ResetEvent(player2);
+				}
+				else
+				{
+					ResetEvent(hEvent);
+					MessageBox(NULL, "Сейчас не ваш ход", "Notification", MB_OK);
+					SetEvent(hEvent);
+					return 0;
+				}
+
+			}
+			else if (szWinName == "Player 2")
+			{
+				if (WaitForSingleObject(player2,0) == WAIT_TIMEOUT)
+				{
+					map_sections[i * size_field + j] = 0;
+					SetEvent(player2);
+					ResetEvent(player1);
+				}
+				else
+				{
+					ResetEvent(hEvent);
+					MessageBox(NULL, "Сейчас не ваш ход", "Notification", MB_OK);
+					SetEvent(hEvent);
+					return 0;
+				}
+			}
+		}
 		SendMessage(HWND_BROADCAST, MESSAGE, 0, lParam);
+		EndGameCheck(j, i);
 		return 0;
 	}
 	case WM_KEYUP:
 		switch (wParam)
 		{
+		case 0x31:
+			SetThreadPriority(thread_background, THREAD_PRIORITY_IDLE);
+			MessageBox(NULL,"IDLE priority","Notification",MB_OK);
+			return 0;
+		case 0x32:
+			SetThreadPriority(thread_background, THREAD_PRIORITY_LOWEST);
+			MessageBox(NULL, "LOWEST priority", "Notification", MB_OK);
+			return 0;
+		case 0x33:
+			SetThreadPriority(thread_background, THREAD_PRIORITY_BELOW_NORMAL);
+			MessageBox(NULL, "BELOW NORMAL priority", "Notification", MB_OK);
+			return 0;
+		case 0x34:
+			SetThreadPriority(thread_background, THREAD_PRIORITY_NORMAL);
+			MessageBox(NULL, "NORMAL priority", "Notification", MB_OK);
+			return 0;
+		case 0x35:
+			SetThreadPriority(thread_background, THREAD_PRIORITY_ABOVE_NORMAL);
+			MessageBox(NULL, "ABOVE NORMAL priority", "Notification", MB_OK);
+			return 0;
+		case 0x36:
+			SetThreadPriority(thread_background, THREAD_PRIORITY_HIGHEST);
+			MessageBox(NULL, "HIGHEST priority", "Notification", MB_OK);
+			return 0;
+		case 0x37:
+			SetThreadPriority(thread_background, THREAD_PRIORITY_TIME_CRITICAL);
+			MessageBox(NULL, "TIME CRITICAL priority", "Notification", MB_OK);
+			return 0;
 		case VK_ESCAPE: //esc
 			PostQuitMessage(0);
 			return 0;
-		case VK_RETURN: //enter
-			hdc = GetDC(hwnd);
-			DeleteObject(hBrush);
-			R = rand() % 256; G = rand() % 256; B = rand() % 256;
-			COLORREF bkcolor = RGB(R, G, B);
-			hBrush = CreateSolidBrush(bkcolor);
-			SetClassLongPtr(hwnd, GCL_HBRBACKGROUND, (LONG)hBrush);
-			InvalidateRect(hwnd, NULL, TRUE);
-			ReleaseDC(hwnd, hdc);
+		case VK_SPACE:
+			if (thread_stop == FALSE)
+				SuspendThread(thread_background);
+			else
+				ResumeThread(thread_background);
+			thread_stop = !thread_stop;
 			return 0;
 		}
 		return 0;
 	case WM_DESTROY:
+		UnregisterHotKey(hwnd, id1);
+		UnregisterHotKey(hwnd, id2);
+		SendMessage(HWND_BROADCAST, MESSAGE_HOTKEY, 0, 0);
 		PostQuitMessage(0);       /* send a WM_QUIT to the message queue */
 		return 0;
 	}
 
 	return DefWindowProc(hwnd, message, wParam, lParam);
 }
-
-#pragma endregion
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
-	loadImage();
-	srand((unsigned int)time(0));
+	semaphore = CreateSemaphore(NULL, 2, 2, _T("semaphore"));
+	if (WaitForSingleObject(semaphore, 0) == WAIT_TIMEOUT) return NULL; //если открыто 2 окна то больше не открывать
+	int mode = 0,a;
+	thread_stop = FALSE;
+	loadImage(hwnd);
 	MSG message;            /* Here message to the application are saved */
-	int a;
+	semaphore_one_winner = CreateSemaphore(NULL, 1, 1, _T("semaphore1"));
+	if (GetLastError()==ERROR_ALREADY_EXISTS)          //если он создался снова то создаём семафор второго игрока
+		szWinName = (TCHAR*)"Player 2";
+	else
+		szWinName = (TCHAR*)"Player 1";
+	hEvent = CreateEvent(NULL, TRUE, TRUE, _T("event"));
+	player1 = CreateEvent(NULL, TRUE, FALSE, _T("player1"));
+	player2 = CreateEvent(NULL, TRUE, FALSE, _T("player2"));
 	wincl = { 0 };/* Data structure for the windowclass */
-	auto res = CommandLineToArgvW(GetCommandLineW(), &a);
+	res = CommandLineToArgvW(GetCommandLineW(), &a);
 	if (res[1] != NULL)
 	{
-		int mode = atoi((const char*)res[1]);
-		switch (mode)
-		{
-		case 1:
-			fstream_in();
-			break;
-		case 2:
-			FILE_var_in();
-			break;
-		case 3:
-			funcWINAPI_in();
-			break;
-		case 4:
-			MappingFile_in();
-			break;
-		default:
-			fstream_in();
-		}
+		mode = atoi((const char*)res[1]);
 	}
+	switch (mode)
+	{
+	case 1:
+		fstream_in();     //файловые потоки
+		break;
+	case 2:
+		FILE_var_in();    //файловые переменные
+		break;
+	case 3:
+		funcWINAPI_in();  //функции WinAPI
+		break;
+	case 4:
+		MappingFile_in(); //отображение на память
+		break;
+	default:
+		funcWINAPI_in();
+	}
+	ColorChange(R, G,B);
 	wincl.style = CS_VREDRAW | CS_HREDRAW;
 	wincl.hInstance = hInstance;
 	wincl.lpszClassName = szWinClass;
-	wincl.lpfnWndProc = WindowProcedure;
-	hBrush = CreateSolidBrush(RGB(R, G, B)); //êèñòü äëÿ ôîíà
-	hBrushSection = CreateSolidBrush(RGB(33, 189, 207)); //êèñòü äëÿ ðèñîâàíèÿ êðóãîâ
-	hPen = CreatePen(PS_SOLID, 2, RGB(24, 240, 60)); //ïåðî äëÿ ðèñîâàíèÿ êðóãîâ
+	wincl.lpfnWndProc = WindowProcedure;                 //функция-обработчик сообщений
+	hBrush = CreateSolidBrush(RGB(R, G, B));             //кисть для фона 
+	hBrushSection = CreateSolidBrush(RGB(33, 189, 207)); //кисть для крестиков-ноликов по умолчанию
+	hPen = CreatePen(PS_SOLID, 2, RGB(24, 240, 60));     //перо для крестиков-ноликов по умолчанию
 	wincl.hbrBackground = hBrush;
 	/* Register the window class, and if it fails quit the program */
 	if (!RegisterClass(&wincl))
@@ -301,83 +385,41 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	GetClientRect(hwnd, &clientArea);
 	GetWindowRect(hwnd, &rect); sizeWindowX = rect.left; sizeWindowY = rect.top;
 	hdc = GetDC(hwnd);
-	sizeX = (int)round(clientArea.right / (double(countLine) + 1)); //size of a rectangle horizontally
-	sizeY = (int)round(clientArea.bottom / (double(countLine) + 1)); //size of a rectangle vertically
+	sizeX = (int)round(clientArea.right / (double(size_field))); //size of a rectangle horizontally
+	sizeY = (int)round(clientArea.bottom / (double(size_field))); //size of a rectangle vertically
 	/*array rectangle initialization*/
-	sections = new Section * [countLine + 1];
-	for (int i = 0; i < countLine + 1; i++)
-		sections[i] = new Section[countLine + 1];
-	for (int i = 0; i < countLine + 1; i++)
-		for (int j = 0; j < countLine + 1; j++)
-			sections[i][j] = { FALSE,FALSE, {j * sizeX,i * sizeY,j * sizeX + sizeX,i * sizeY + sizeY} };
+	InitializeLocation(sizeX, sizeY);
 	ShowWindow(hwnd, nCmdShow);
-	MESSAGE = RegisterWindowMessage(mess_name);
-	hMapSections = CreateFileMapping(INVALID_HANDLE_VALUE, (LPSECURITY_ATTRIBUTES)NULL, PAGE_READWRITE, 0, sizeP, mapName);
-	if (hMapSections != NULL)
-	{
-		map_sections = (char*)MapViewOfFile(hMapSections, FILE_MAP_ALL_ACCESS, 0, 0, sizeP);
-		if (map_sections == NULL) exit(0);
-		if (GetLastError() != ERROR_ALREADY_EXISTS)
-			for (int i = 0; i < sizeP; i++)
-				map_sections[i] = -1;
-		else
-			for (int i = 0; i < countLine + 1; i++)
-				for (int j = 0; j < countLine + 1; j++)
-					if (map_sections[i * (countLine + 1) + j] == 0)
-						sections[i][j].Cross = TRUE;
-					else
-						sections[i][j].Ellipse = TRUE;
-	}
-	id1 = GlobalAddAtom(to_string(rand()%1001).c_str());
-	id2 = GlobalAddAtom(to_string(1000 + rand() % 1001).c_str());
-	BOOL res1 = RegisterHotKey(hwnd, id1, MOD_CONTROL | MOD_NOREPEAT, 0x51);
-	BOOL res2 = RegisterHotKey(hwnd, id2, MOD_SHIFT | MOD_NOREPEAT, 0x43);
-	//if (GetLastError() != 0)
-	//	MessageBox(hwnd, ("Ошибка при ркгистрации горячей клавиши (код ощибки: " + std::to_string(GetLastError()) + ")").c_str(), NULL, MB_ICONERROR);
-	/* Run the message loop. It will run until GetMessage() returns 0 */
-
+	MESSAGE = RegisterWindowMessage(_T("message"));
+	MESSAGE_HOTKEY = RegisterWindowMessage(_T("hotkey"));
+	MESSAGE_EXIT = RegisterWindowMessage(_T("exit"));
+	InitializeMapSection();
+	res_regist_hotkey_1 = RegisterHotKey(hwnd, id1, MOD_CONTROL | MOD_NOREPEAT, 0x51);
+	res_regist_hotkey_2 = RegisterHotKey(hwnd, id2, MOD_SHIFT | MOD_NOREPEAT, 0x43);
+	listArg listArgChangeBackground = {hdc,hBrush,hwnd};
+	thread_background = CreateThread(NULL, 0, ChangeBackground, (LPVOID)&listArgChangeBackground, 0,NULL);
 	while (GetMessage(&message, NULL, 0, 0))
 	{
 		TranslateMessage(&message);
 		/* Send message to WindowProcedure */
 		DispatchMessage(&message);
 	}
-	UnmapViewOfFile(map_sections);
-	/* Cleanup stuff */
-	for (int i = 0; i < countLine + 1; i++)
-		delete[] sections[i];
-	delete[] sections;
-	if (res[1] != NULL)
-	{
-		int mode = atoi((const char*)res[1]);
-		switch (mode)
-		{
-		case 1:
-			fstream_out(); //ôàéëîâûå ïîòîêè
-			break;
-		case 2:
-			FILE_var_out(); //ôàéëîâûå ïåðåìåííûå
-			break;
-		case 3:
-			funcWINAPI_out(); //÷åðåç ôóíêöèè WINAPI
-			break;
-		case 4:
-			MappingFile_out();
-			break;
-		default:
-			fstream_out();
-		}
-	}
-	delete[] png_my_image.data;
-	delete[] jpeg_my_image.data;
-	GlobalDeleteAtom(id1);
-	GlobalDeleteAtom(id2);
+	DestroyMapSection();
+	DestroyLocation();
+	DestroyImage();
+	ReleaseSemaphore(semaphore, 1, NULL);
+	CloseHandle(semaphore);
+	CloseHandle(semaphore_one_winner);
+	CloseHandle(hEvent);
+	CloseHandle(player1);
+	CloseHandle(player2);
+	CloseHandle(thread_background);
 	LocalFree(res);
-	DeleteObject(hBrushSection);
+	DestroyWindow(hwnd);
 	DeleteDC(hdc);
 	DeleteObject(hPen);
-	DestroyWindow(hwnd);
 	DeleteObject(hBrush);
+	DeleteObject(hBrushSection);
 	UnregisterClass(szWinClass, hInstance);
 	return NULL;
 }
