@@ -3,9 +3,7 @@ extern int size_field;
 extern int R;
 extern int G; 
 extern int B;
-const int time_sleep = 100;
-Image png_my_image;
-Image jpeg_my_image;
+const int time_sleep = 1000;
 listArg listArgChangeBackground;
 RECT** location;
 char* map_sections;
@@ -57,14 +55,14 @@ DWORD WINAPI ChangeBackground(LPVOID arglist)
 	}
 	return 0;
 }
-void loadImage(HWND& hwnd)
+void loadImage()
 {
 	HMODULE hModule = LoadLibrary(_T("Dll.dll"));
 	BYTE* (*loadImage)(const char*, int*, int*);
 	if (hModule != NULL) (FARPROC&)loadImage = GetProcAddress(hModule, "loadImage");
 	else
 	{
-		MessageBox(hwnd, ("Ошибка при загрузке библиотеки (код ошибки: " + std::to_string(GetLastError()) + ")").c_str(), NULL, MB_ICONERROR);
+		MessageBox(NULL, ("Ошибка при загрузке библиотеки (код ошибки: " + std::to_string(GetLastError()) + ")").c_str(), NULL, MB_ICONERROR);
 		return;
 	}
 	if (loadImage != NULL)
@@ -160,7 +158,10 @@ void InitializeLocation(int& sizeX, int& sizeY)
 		for (int j = 0; j < size_field; j++)
 			location[i][j] = { j * sizeX,i * sizeY,j * sizeX + sizeX,i * sizeY + sizeY };
 }
-
+RECT** GetLocation()
+{
+	return location;
+}
 void DestroyLocation()
 {
 	for (int i = 0; i < size_field; i++)

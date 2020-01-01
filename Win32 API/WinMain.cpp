@@ -151,16 +151,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	{
 		PostQuitMessage(0);
 	}
-	else if (message == MESSAGE_HOTKEY)
-	{
-		res_regist_hotkey_1 = RegisterHotKey(hwnd, id1, MOD_CONTROL | MOD_NOREPEAT, 0x51);
-		res_regist_hotkey_2 = RegisterHotKey(hwnd, id2, MOD_SHIFT | MOD_NOREPEAT, 0x43);
-	}
-	else if (message == MESSAGE)
-	{
-		hdc = GetDC(hwnd);
-		Redraw(hwnd, hdc, hPen,hBrush);
-	}
 	switch (message)
 	{
 	case WM_MOVING:
@@ -200,18 +190,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 		Redraw(hwnd, hdc, hPen, hBrush);
 		EndPaint(hwnd, &paint);
 		return 0;
-	case WM_HOTKEY:
-		if (wParam == id1) //ctrl+q
-		{
-			PostQuitMessage(0);
-		}
-		else if (wParam == id2) //shift+c
-			RunNotepad();
-		return 0;
 	case WM_LBUTTONDOWN: 
 	{
 		sizeX = (int)round(clientArea.right / (double(size_field)));
 		sizeY = (int)round(clientArea.bottom / (double(size_field)));
+		WPARAM param = -1;
 		int currentMouseX = GET_X_LPARAM(lParam);
 		int currentMouseY = GET_Y_LPARAM(lParam);
 		int i = currentMouseY / sizeY;
@@ -222,14 +205,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 		if (WaitForSingleObject(hEvent, 0) == WAIT_TIMEOUT) return 0;
 		if (map_sections[i * size_field + j] == -1)
 		{
-			//if (WaitForSingleObject(semaphore_one_winner, 0) == WAIT_TIMEOUT) return 0;
-			//else ReleaseSemaphore(semaphore_one_winner, 1, NULL);
-			//if (WaitForSingleObject(hEvent1, 0) == WAIT_TIMEOUT) return 0;
 			if (szWinName == "Player 1")
 			{
 				if (WaitForSingleObject(player1,0)==WAIT_TIMEOUT)
 				{
 					map_sections[i * size_field + j] = 1;
+					param = 1;
 					SetEvent(player1);
 					ResetEvent(player2);
 				}
@@ -247,6 +228,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 				if (WaitForSingleObject(player2,0) == WAIT_TIMEOUT)
 				{
 					map_sections[i * size_field + j] = 0;
+					param = 0;
 					SetEvent(player2);
 					ResetEvent(player1);
 				}
@@ -259,41 +241,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 				}
 			}
 		}
-		SendMessage(HWND_BROADCAST, MESSAGE, 0, lParam);
 		EndGameCheck(j, i);
 		return 0;
 	}
 	case WM_KEYUP:
 		switch (wParam)
 		{
-		case 0x31:
-			SetThreadPriority(thread_background, THREAD_PRIORITY_IDLE);
-			MessageBox(NULL,"IDLE priority","Notification",MB_OK);
-			return 0;
-		case 0x32:
-			SetThreadPriority(thread_background, THREAD_PRIORITY_LOWEST);
-			MessageBox(NULL, "LOWEST priority", "Notification", MB_OK);
-			return 0;
-		case 0x33:
-			SetThreadPriority(thread_background, THREAD_PRIORITY_BELOW_NORMAL);
-			MessageBox(NULL, "BELOW NORMAL priority", "Notification", MB_OK);
-			return 0;
-		case 0x34:
-			SetThreadPriority(thread_background, THREAD_PRIORITY_NORMAL);
-			MessageBox(NULL, "NORMAL priority", "Notification", MB_OK);
-			return 0;
-		case 0x35:
-			SetThreadPriority(thread_background, THREAD_PRIORITY_ABOVE_NORMAL);
-			MessageBox(NULL, "ABOVE NORMAL priority", "Notification", MB_OK);
-			return 0;
-		case 0x36:
-			SetThreadPriority(thread_background, THREAD_PRIORITY_HIGHEST);
-			MessageBox(NULL, "HIGHEST priority", "Notification", MB_OK);
-			return 0;
-		case 0x37:
-			SetThreadPriority(thread_background, THREAD_PRIORITY_TIME_CRITICAL);
-			MessageBox(NULL, "TIME CRITICAL priority", "Notification", MB_OK);
-			return 0;
 		case VK_ESCAPE: //esc
 			PostQuitMessage(0);
 			return 0;
@@ -307,9 +260,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 		}
 		return 0;
 	case WM_DESTROY:
-		UnregisterHotKey(hwnd, id1);
-		UnregisterHotKey(hwnd, id2);
-		SendMessage(HWND_BROADCAST, MESSAGE_HOTKEY, 0, 0);
 		PostQuitMessage(0);       /* send a WM_QUIT to the message queue */
 		return 0;
 	}
@@ -322,18 +272,21 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	if (WaitForSingleObject(semaphore, 0) == WAIT_TIMEOUT) return NULL; //если открыто 2 окна то больше не открывать
 	int mode = 0,a;
 	thread_stop = FALSE;
-	loadImage(hwnd);
+	loadImage();
 	MSG message;            /* Here message to the application are saved */
 	semaphore_one_winner = CreateSemaphore(NULL, 1, 1, _T("semaphore1"));
 	if (GetLastError()==ERROR_ALREADY_EXISTS)          //если он создался снова то создаём семафор второго игрока
 		szWinName = (TCHAR*)"Player 2";
 	else
+	{
 		szWinName = (TCHAR*)"Player 1";
+	}
 	hEvent = CreateEvent(NULL, TRUE, TRUE, _T("event"));
 	player1 = CreateEvent(NULL, TRUE, FALSE, _T("player1"));
 	player2 = CreateEvent(NULL, TRUE, FALSE, _T("player2"));
 	wincl = { 0 };/* Data structure for the windowclass */
-	res = CommandLineToArgvW(GetCommandLineW(), &a);
+
+	res = CommandLineToArgvW((WCHAR*)lpCmdLine, &a);
 	if (res[1] != NULL)
 	{
 		mode = atoi((const char*)res[1]);
@@ -390,12 +343,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	/*array rectangle initialization*/
 	InitializeLocation(sizeX, sizeY);
 	ShowWindow(hwnd, nCmdShow);
-	MESSAGE = RegisterWindowMessage(_T("message"));
-	MESSAGE_HOTKEY = RegisterWindowMessage(_T("hotkey"));
 	MESSAGE_EXIT = RegisterWindowMessage(_T("exit"));
 	InitializeMapSection();
-	res_regist_hotkey_1 = RegisterHotKey(hwnd, id1, MOD_CONTROL | MOD_NOREPEAT, 0x51);
-	res_regist_hotkey_2 = RegisterHotKey(hwnd, id2, MOD_SHIFT | MOD_NOREPEAT, 0x43);
 	listArg listArgChangeBackground = {hdc,hBrush,hwnd};
 	thread_background = CreateThread(NULL, 0, ChangeBackground, (LPVOID)&listArgChangeBackground, 0,NULL);
 	while (GetMessage(&message, NULL, 0, 0))
